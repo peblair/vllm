@@ -1,0 +1,48 @@
+name: Test
+
+on:
+  push
+
+jobs:
+
+  test:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+          os: ['ubuntu-20.04']
+          python-version: ['3.11']
+          pytorch-version: ['2.1.0']
+          cuda-version: ['12.1']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Linux Env
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          bash -x .github/workflows/scripts/env.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+            python-version: ${{ matrix.python-version }}
+
+      - name: Install CUDA ${{ matrix.cuda-version }}
+        run: |
+          bash -x .github/workflows/scripts/cuda-install.sh ${{ matrix.cuda-version }} ${{ matrix.os }}
+
+      - name: Install PyTorch ${{ matrix.pytorch-version }} with CUDA ${{ matrix.cuda-version }}
+        run: |
+          bash -x .github/workflows/scripts/pytorch-install.sh ${{ matrix.python-version }} ${{ matrix.pytorch-version }} ${{ matrix.cuda-version }}
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install -r requirements-dev.txt
+          pytest tests/
